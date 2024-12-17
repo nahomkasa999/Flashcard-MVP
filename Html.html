@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="Css.css" />
   </head>
   <body>
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round">
+                <span class="sun">☀️</span>
+                <span class="moon">🌙</span>
+            </div>
+        </label>
+    </div>
+
     <h1>PDF Text Extractor _ Flashcards Generator</h1>
 
     <div class="container">
@@ -19,7 +29,8 @@
         <input type="number" id="endPage" min="1" value="1">
       </div>
       <button onclick="extractText()">Extract Text</button>
-    </div>
+      <button id="downloadButton" style="display: none;" onclick="downloadFlashcards()">Download Flashcards</button>
+    </div>  
 
     <div id="output-container">
       <h2>Flashcards:</h2>
