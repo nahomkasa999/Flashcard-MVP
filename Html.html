@@ -12,6 +12,12 @@
 
     <div class="container">
       <input type="file" id="fileInput" />
+      <div class="page-range">
+        <label for="startPage">Start Page:</label>
+        <input type="number" id="startPage" min="1" value="1">
+        <label for="endPage">End Page:</label>
+        <input type="number" id="endPage" min="1" value="1">
+      </div>
       <button onclick="extractText()">Extract Text</button>
     </div>
 

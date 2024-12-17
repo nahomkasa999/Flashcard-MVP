@@ -98,3 +98,17 @@ body {
     color: #333;
   }
   
+  .page-range {
+    margin: 10px 0;
+  }
+  
+  .page-range label {
+    margin-right: 5px;
+  }
+  
+  .page-range input {
+    width: 60px;
+    margin-right: 15px;
+    padding: 5px;
+  }
+  
