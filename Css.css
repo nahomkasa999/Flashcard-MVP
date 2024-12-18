@@ -375,3 +375,75 @@ input:checked + .slider:before {
 h1, #output-container h2 {
     color: var(--primary-color);
 }
+
+.review-info {
+    margin-top: 1rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .review-info {
+    color: #aaa;
+}
+
+.difficulty-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.difficulty-btn {
+    height: 50px;
+    width: 100px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Button specific styles */
+.difficulty-btn.idk {
+    background-color: rgba(255, 0, 0, 0.2);
+    border: 1px solid #ff0000;
+}
+
+.difficulty-btn.hard {
+    background-color: rgba(255, 165, 0, 0.2);
+    border: 1px solid #ffa500;
+}
+
+.difficulty-btn.good {
+    background-color: rgba(0, 128, 0, 0.2);
+    border: 1px solid #008000;
+}
+
+.difficulty-btn.easy {
+    background-color: rgba(0, 0, 255, 0.2);
+    border: 1px solid #0000ff;
+}
+
+/* Hover effects */
+.difficulty-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .difficulty-buttons {
+        gap: 4px;
+    }
+    
+    .difficulty-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        height: 25px;
+        width: 100px;
+    }
+}

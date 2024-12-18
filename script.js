@@ -26,6 +26,71 @@ toggleSwitch.addEventListener("change", switchTheme);
 
 let paragraphs = [];
 let generatedFlashcards = [];
+const INITIAL_EASE = 2.5;
+const MIN_EASE = 1.3;
+const MAX_EASE = 3.0;
+
+// Add this class for managing card states
+class FlashcardState {
+  constructor(flashcard) {
+    this.flashcard = flashcard;
+    this.interval = 0; // Days until next review
+    this.ease = INITIAL_EASE;
+    this.reviews = 0;
+    this.lastReview = new Date();
+    this.dueDate = new Date();
+  }
+
+  review(difficulty) {
+    this.reviews++;
+    const now = new Date();
+
+    switch (difficulty) {
+      case "idk":
+        this.interval = 0;
+        this.ease = Math.max(MIN_EASE, this.ease - 0.2);
+        this.dueDate = new Date(now.getTime() + 1 * 60 * 1000);
+        break;
+
+      case "hard":
+        this.interval = Math.max(1, this.interval * 1.2);
+        this.ease = Math.max(MIN_EASE, this.ease - 0.15);
+        break;
+
+      case "good":
+        if (this.interval === 0) {
+          this.interval = 1;
+        } else {
+          this.interval = this.interval * this.ease;
+        }
+        break;
+
+      case "easy":
+        if (this.interval === 0) {
+          this.interval = 4;
+        } else {
+          this.interval = this.interval * this.ease * 1.3;
+        }
+        this.ease = Math.min(MAX_EASE, this.ease + 0.15);
+        break;
+    }
+
+    this.lastReview = now;
+
+    if (difficulty !== "idk") {
+      this.interval = Math.round(this.interval);
+      this.dueDate = new Date(
+        now.getTime() + this.interval * 24 * 60 * 60 * 1000
+      );
+    }
+
+    return {
+      nextReview: this.dueDate,
+      interval: this.interval,
+      ease: this.ease,
+    };
+  }
+}
 
 // Extract text from PDF
 async function extractText() {
@@ -99,6 +164,109 @@ async function extractText() {
   reader.readAsArrayBuffer(file);
 }
 
+// Modify your flashcard creation code
+function createFlashcard(flashcard) {
+  const div = document.createElement("div");
+  const cardState = new FlashcardState(flashcard);
+
+  // Create elements separately for better control
+  const question = `<h2>Q: ${flashcard.Q}</h2>`;
+  const answer = `<p class="answer" style="display: none">Answer: ${flashcard.A}</p>`;
+  const extra = `<p class="extra" style="display: none">Extra: ${flashcard.Extra}</p>`;
+  const reviewInfo = `<p class="review-info" style="display: none"></p>`;
+
+  // Create difficulty buttons (initially hidden)
+  const difficultyButtons = `
+        <div class="difficulty-buttons" style="display: none">
+            <button class="difficulty-btn idk">Again</button>
+            <button class="difficulty-btn hard">Hard</button>
+            <button class="difficulty-btn good">Good</button>
+            <button class="difficulty-btn easy">Easy</button>
+        </div>
+    `;
+
+  div.innerHTML =
+    question +
+    answer +
+    extra +
+    reviewInfo +
+    "<button class='show-btn'>Show Answer</button>" +
+    difficultyButtons;
+
+  // Get the button and content elements
+  const showButton = div.querySelector(".show-btn");
+  const answerElement = div.querySelector(".answer");
+  const extraElement = div.querySelector(".extra");
+  const difficultyContainer = div.querySelector(".difficulty-buttons");
+  const reviewInfoElement = div.querySelector(".review-info");
+
+  // Track the current state
+  let state = "question";
+
+  // Add click event listener for show/hide
+  showButton.addEventListener("click", () => {
+    switch (state) {
+      case "question":
+        answerElement.style.display = "block";
+        showButton.textContent = "Show Extra";
+        difficultyContainer.style.display = "flex";
+        state = "answer";
+        break;
+
+      case "answer":
+        extraElement.style.display = "block";
+        showButton.textContent = "Hide All";
+        state = "extra";
+        break;
+
+      case "extra":
+        answerElement.style.display = "none";
+        extraElement.style.display = "none";
+        difficultyContainer.style.display = "none";
+        reviewInfoElement.style.display = "none";
+        showButton.textContent = "Show Answer";
+        state = "question";
+        break;
+    }
+  });
+
+  // Add click handlers for difficulty buttons
+  div.querySelectorAll(".difficulty-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const difficulty = e.target.className.split(" ")[1];
+      const result = cardState.review(difficulty);
+
+      // Update review info with new function
+      updateReviewInfo(reviewInfoElement, result.nextReview);
+
+      // Save state to localStorage
+      saveCardState(flashcard.Q, cardState);
+
+      // Visual feedback
+      div
+        .querySelectorAll(".difficulty-btn")
+        .forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+    });
+  });
+
+  return div;
+}
+
+// Helper functions for state management
+function saveCardState(cardId, state) {
+  const states = JSON.parse(localStorage.getItem("flashcardStates") || "{}");
+  states[cardId] = {
+    interval: state.interval,
+    ease: state.ease,
+    reviews: state.reviews,
+    lastReview: state.lastReview.toISOString(),
+    dueDate: state.dueDate.toISOString(),
+  };
+  localStorage.setItem("flashcardStates", JSON.stringify(states));
+}
+
+// Modify your flashcard display code
 async function generateFlashcardsForParagraphs(paragraphs) {
   const allFlashcards = [];
 
@@ -139,49 +307,8 @@ async function generateFlashcardsForParagraphs(paragraphs) {
     FlashcardDisplay.innerHTML = "";
 
     allFlashcards.forEach((flashcard) => {
-      const div = document.createElement("div");
-
-      // Create elements separately for better control
-      const question = `<h2>Q: ${flashcard.Q}</h2>`;
-      const answer = `<p class="answer" style="display: none">Answer: ${flashcard.A}</p>`;
-      const extra = `<p class="extra" style="display: none">Extra: ${flashcard.Extra}</p>`;
-
-      div.innerHTML =
-        question + answer + extra + "<button>Show Answer</button>";
-
-      // Get the button and content elements
-      const button = div.querySelector("button");
-      const answerElement = div.querySelector(".answer");
-      const extraElement = div.querySelector(".extra");
-
-      // Track the current state
-      let state = "question"; // can be 'question', 'answer', or 'extra'
-
-      // Add click event listener
-      button.addEventListener("click", () => {
-        switch (state) {
-          case "question":
-            answerElement.style.display = "block";
-            button.textContent = "Show Extra";
-            state = "answer";
-            break;
-
-          case "answer":
-            extraElement.style.display = "block";
-            button.textContent = "Hide All";
-            state = "extra";
-            break;
-
-          case "extra":
-            answerElement.style.display = "none";
-            extraElement.style.display = "none";
-            button.textContent = "Show Answer";
-            state = "question";
-            break;
-        }
-      });
-
-      FlashcardDisplay.appendChild(div);
+      const flashcardElement = createFlashcard(flashcard);
+      FlashcardDisplay.appendChild(flashcardElement);
     });
   } catch (error) {
     console.error("Error generating flashcards:", error);
@@ -310,4 +437,33 @@ function generateCSVForAnkiWithHR(flashcards) {
     console.error("Error generating CSV:", error);
     alert("Error generating CSV file. Please try again.");
   }
+}
+
+// Handle difficulty selection
+function handleDifficulty(difficulty, flashcard) {
+  // You can implement spaced repetition logic here
+  console.log(`Card marked as ${difficulty}`, flashcard);
+  // Could save to localStorage or send to backend
+}
+
+// Update the review info display
+function updateReviewInfo(reviewInfoElement, nextReview) {
+  const now = new Date();
+  const diffMinutes = Math.round((nextReview - now) / (1000 * 60));
+  const diffDays = Math.ceil((nextReview - now) / (1000 * 60 * 60 * 24));
+
+  let reviewText;
+  if (diffMinutes < 60) {
+    reviewText = `Next review in: ${diffMinutes} minute${
+      diffMinutes !== 1 ? "s" : ""
+    }`;
+  } else if (diffDays < 1) {
+    const hours = Math.ceil(diffMinutes / 60);
+    reviewText = `Next review in: ${hours} hour${hours !== 1 ? "s" : ""}`;
+  } else {
+    reviewText = `Next review in: ${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+  }
+
+  reviewInfoElement.textContent = reviewText;
+  reviewInfoElement.style.display = "block";
 }
